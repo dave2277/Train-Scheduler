@@ -2,11 +2,9 @@
 var name;
 var destination;
 var firstTrainTime;
-var frequency;
-var firstTrainTime_error;
+var nextTrain;
+var tMinutesTillTrain;
 var regexValidator = new RegExp(/^([01]\d|2[0-3]):?([0-5]\d)$/);
-
-
 
 //Initialize configuraiton to Firebase
 var config = {
@@ -38,9 +36,7 @@ var config = {
 		firstTrainTime = $("#firstTrainTime").val().trim();
 		
 
-		if (regexValidator.test(firstTrainTime)) {
-			
-		} else {
+		if (!regexValidator.test(firstTrainTime)) {
 			alert("Format not valid.  Please enter valid 24 hour time.");
 		}
 	} 
@@ -59,7 +55,6 @@ var config = {
 			}
 		});
 
-
 	//Function to capture input from the form
 	$("#submit").on("click", function() {
 
@@ -69,15 +64,25 @@ var config = {
 		destination = $("#destination").val().trim();
 		frequency = $("#frequency").val().trim(); 
 
-	//Build Timetable based on firstTrainTime and frequency
-
-	//Get current time
-
-	//Get next arrival time from timetable
-
-	//Convert current time and next arrival time into UNIX values
-
-	//Subtract next arrival time from curren time to calculate minutes away
+    	var firstTimeConverted = moment(firstTrainTime, "HH:mm").subtract(1, "years");
+    
+    	// Current Time
+    	var currentTime = moment();
+    	console.log("CURRENT TIME: " + moment(currentTime).format("HH:mm"));
+    
+    	// Difference between the times
+    	var diffTime = moment().diff(moment(firstTimeConverted), "minutes");
+    
+    	// Time apart (remainder)
+    	var tRemainder = diffTime % frequency;
+    	console.log(tRemainder);
+    	
+    	// Minute Until Train
+    	tMinutesTillTrain = frequency - tRemainder;
+    	console.log("MINUTES TILL TRAIN: " + tMinutesTillTrain);
+    
+    	// Next Train
+    	nextTrain = moment().add(tMinutesTillTrain, "minutes").format("HH:mm");
 
 
 	//Send values to firebase
@@ -86,27 +91,22 @@ var config = {
 			destination: destination,
 			firstTrainTime: firstTrainTime,
 			frequency: frequency,
-
+			minutesAway: tMinutesTillTrain,
+			nextTrain: nextTrain
       });
 
 	});
 
 	database.ref().on("child_added", function(childSnapshot) {
-
-		console.log(childSnapshot.val().name);
-		console.log(childSnapshot.val().destination);
-		console.log(childSnapshot.val().firstTrainTime);
-		console.log(childSnapshot.val().frequency);
-
 		
 
 	  }, function(errorObject) {
     console.log("The read failed: " + errorObject.code);
 });
 
-	database.ref().orderByChild("dateAdded").on("child_added", function(snapshot) {
+	database.ref().orderByChild("nextTrain").on("child_added", function(snapshot) {
 		
-		$('#tableId tr:last').after('<tr><td>' + name + '</td><td>' + destination + '</td></tr>');
+		$('#tableId tr:last').after('<tr><td>' + name + '</td><td>' + destination + 
+			'</td><td>' + frequency + '</td><td>' + nextTrain + '</td><td>' + tMinutesTillTrain + '</td></tr>' );
 		
-
 	});
